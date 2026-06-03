@@ -70,8 +70,8 @@ public:
    int               GetSwingCount()  const { return m_swing_count; }
    int               GetEventCount()  const { return m_event_count; }
 
-   const SSwingPoint*   GetSwing(int idx)  const;   // 0 = most recent
-   const SStructureEvent* GetEvent(int idx) const;  // 0 = most recent
+   SSwingPoint          GetSwing(int idx)  const;   // 0 = most recent
+   SStructureEvent      GetEvent(int idx) const;  // 0 = most recent
 
    ENUM_TREND_BIAS   GetBias()          const { return m_current_bias; }
    double            GetLastSwingHigh() const { return m_last_swing_high; }
@@ -314,16 +314,18 @@ bool CStructureDetector::Update(const datetime &time[], const double &open[], co
 }
 
 //+------------------------------------------------------------------+
-const SSwingPoint* CStructureDetector::GetSwing(int idx) const
+SSwingPoint CStructureDetector::GetSwing(int idx) const
 {
-   if(idx < 0 || idx >= m_swing_count) return NULL;
-   return &m_swings[idx];
+   SSwingPoint empty;
+   if(idx < 0 || idx >= m_swing_count) return empty;
+   return m_swings[idx];
 }
 
-const SStructureEvent* CStructureDetector::GetEvent(int idx) const
+SStructureEvent CStructureDetector::GetEvent(int idx) const
 {
-   if(idx < 0 || idx >= m_event_count) return NULL;
-   return &m_events[idx];
+   SStructureEvent empty;
+   if(idx < 0 || idx >= m_event_count) return empty;
+   return m_events[idx];
 }
 
 #endif // STRUCTUREDETECTOR_MQH

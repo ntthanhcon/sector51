@@ -56,7 +56,7 @@ public:
                             const double &low[], const double &close[], int total_bars);
 
    int               GetFVGCount()           const { return m_fvg_count; }
-   const SFVG*       GetFVG(int idx)          const;
+   SFVG              GetFVG(int idx)          const;
    void              Reset();
 };
 
@@ -223,10 +223,11 @@ bool CFVGDetector::Update(const datetime &time[], const double &high[],
    return detected;
 }
 
-const SFVG* CFVGDetector::GetFVG(int idx) const
+SFVG CFVGDetector::GetFVG(int idx) const
 {
-   if(idx < 0 || idx >= m_fvg_count) return NULL;
-   return &m_fvgs[idx];
+   SFVG empty;
+   if(idx < 0 || idx >= m_fvg_count) return empty;
+   return m_fvgs[idx];
 }
 
 #endif // FVGDETECTOR_MQH

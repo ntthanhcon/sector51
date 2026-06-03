@@ -58,7 +58,7 @@ public:
                             const double &low[], const double &close[], int total_bars);
 
    int                       GetLevelCount()         const { return m_level_count; }
-   const SLiquidityLevel*    GetLevel(int idx)        const;
+   SLiquidityLevel           GetLevel(int idx)        const;
    double                    GetATR()                 const { return m_atr; }
 
    void              Reset();
@@ -260,10 +260,11 @@ bool CLiquidityDetector::Update(const datetime &time[], const double &high[],
    return detected;
 }
 
-const SLiquidityLevel* CLiquidityDetector::GetLevel(int idx) const
+SLiquidityLevel CLiquidityDetector::GetLevel(int idx) const
 {
-   if(idx < 0 || idx >= m_level_count) return NULL;
-   return &m_levels[idx];
+   SLiquidityLevel empty;
+   if(idx < 0 || idx >= m_level_count) return empty;
+   return m_levels[idx];
 }
 
 #endif // LIQUIDITYDETECTOR_MQH

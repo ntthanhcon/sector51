@@ -63,7 +63,7 @@ public:
                             const double &close[], int total_bars);
 
    int                  GetOBCount()      const { return m_ob_count; }
-   const SOrderBlock*   GetOB(int idx)    const;
+   SOrderBlock          GetOB(int idx)    const;
    void                 Reset();
 };
 
@@ -211,17 +211,17 @@ bool COrderBlockDetector::Update(const CStructureDetector &structure,
       int new_count = current_events - m_last_event_count;
       for(int e = 0; e < new_count; e++)
       {
-         const SStructureEvent *ev = structure.GetEvent(e);
-         if(ev == NULL) continue;
+         SStructureEvent ev = structure.GetEvent(e);
+         if(ev.time == 0) continue;
 
-         bool bullish_bos = (ev->bias_after == BIAS_BULLISH);
+         bool bullish_bos = (ev.bias_after == BIAS_BULLISH);
 
          SOrderBlock ob;
-         ob.bos_time = ev->time;
+         ob.bos_time = ev.time;
 
-         //--- bos_bar = ev->bar_index (shift into the array)
+         //--- bos_bar = ev.bar_index (shift into the array)
          if(FindLastOppositeCandle(open, high, low, close, time,
-                                    ev->bar_index, bullish_bos, ob))
+                                    ev.bar_index, bullish_bos, ob))
          {
             PushOB(ob);
             detected = true;
@@ -236,10 +236,11 @@ bool COrderBlockDetector::Update(const CStructureDetector &structure,
    return detected;
 }
 
-const SOrderBlock* COrderBlockDetector::GetOB(int idx) const
+SOrderBlock COrderBlockDetector::GetOB(int idx) const
 {
-   if(idx < 0 || idx >= m_ob_count) return NULL;
-   return &m_obs[idx];
+   SOrderBlock empty;
+   if(idx < 0 || idx >= m_ob_count) return empty;
+   return m_obs[idx];
 }
 
 #endif // ORDERBLOCKDETECTOR_MQH

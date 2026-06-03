@@ -101,37 +101,37 @@ void OnStart()
    Print("--- Recent Structure Events ---");
    for(int i = 0; i < MathMin(3, core.Structure().GetEventCount()); i++)
    {
-      const SStructureEvent *ev = core.Structure().GetEvent(i);
-      if(ev == NULL) continue;
+      SStructureEvent ev = core.Structure().GetEvent(i);
+      if(ev.time == 0) continue;
       PrintFormat("  [%s] %s @ %.5f | Bias after: %s",
-                  TimeToString(ev->time, TIME_DATE | TIME_MINUTES),
-                  (ev->event_type == STRUCTURE_BOS ? "BOS" : "CHoCH"),
-                  ev->break_price,
-                  EnumToString(ev->bias_after));
+                  TimeToString(ev.time, TIME_DATE | TIME_MINUTES),
+                  (ev.event_type == STRUCTURE_BOS ? "BOS" : "CHoCH"),
+                  ev.break_price,
+                  EnumToString(ev.bias_after));
    }
 
    //--- Print active FVGs
    Print("--- Active FVGs ---");
    for(int i = 0; i < core.FVG().GetFVGCount(); i++)
    {
-      const SFVG *fvg = core.FVG().GetFVG(i);
-      if(fvg == NULL || fvg->state != ZONE_ACTIVE) continue;
+      SFVG fvg = core.FVG().GetFVG(i);
+      if(fvg.time == 0 || fvg.state != ZONE_ACTIVE) continue;
       PrintFormat("  [%s] %s FVG top=%.5f bot=%.5f fill=%.1f%%",
-                  TimeToString(fvg->time, TIME_DATE | TIME_MINUTES),
-                  (fvg->type == FVG_BULLISH ? "Bull" : "Bear"),
-                  fvg->top, fvg->bottom, fvg->fill_percent);
+                  TimeToString(fvg.time, TIME_DATE | TIME_MINUTES),
+                  (fvg.type == FVG_BULLISH ? "Bull" : "Bear"),
+                  fvg.top, fvg.bottom, fvg.fill_percent);
    }
 
    //--- Print active OBs
    Print("--- Active Order Blocks ---");
    for(int i = 0; i < core.OB().GetOBCount(); i++)
    {
-      const SOrderBlock *ob = core.OB().GetOB(i);
-      if(ob == NULL || ob->state != ZONE_ACTIVE) continue;
+      SOrderBlock ob = core.OB().GetOB(i);
+      if(ob.time == 0 || ob.state != ZONE_ACTIVE) continue;
       PrintFormat("  [%s] %s OB H=%.5f L=%.5f",
-                  TimeToString(ob->time, TIME_DATE | TIME_MINUTES),
-                  (ob->type == OB_BULLISH ? "Bull" : "Bear"),
-                  ob->high, ob->low);
+                  TimeToString(ob.time, TIME_DATE | TIME_MINUTES),
+                  (ob.type == OB_BULLISH ? "Bull" : "Bear"),
+                  ob.high, ob.low);
    }
 
    Print("=== Done ===");
