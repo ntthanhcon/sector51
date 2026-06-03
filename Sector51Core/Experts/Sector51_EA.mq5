@@ -356,16 +356,17 @@ double CalcTP(bool is_buy, double entry, double sl, double atr)
             if(best == 0.0 || lv.price > best) best = lv.price;
          }
       }
-      if(best > 0.0) { tp = best; goto done; }
-      // fallthrough to RR if no liquidity level found
+      if(best > 0.0) tp = best;
    }
 
-   if(InpTP_ATR)
-      tp = is_buy ? entry + atr * InpTP_ATR_Mult : entry - atr * InpTP_ATR_Mult;
-   else  // default: R:R
-      tp = is_buy ? entry + sl_dist * InpTP_RR_Value : entry - sl_dist * InpTP_RR_Value;
+   if(tp == 0.0)
+   {
+      if(InpTP_ATR)
+         tp = is_buy ? entry + atr * InpTP_ATR_Mult : entry - atr * InpTP_ATR_Mult;
+      else  // default: R:R
+         tp = is_buy ? entry + sl_dist * InpTP_RR_Value : entry - sl_dist * InpTP_RR_Value;
+   }
 
-   done:
    return NormalizeDouble(tp, _Digits);
 }
 
@@ -427,8 +428,9 @@ void CheckPartialClose()
       if(!hit) continue;
 
       double lot = PositionGetDouble(POSITION_VOLUME);
-      double close_lot = NormalizeDouble(lot * InpPartialPct / 100.0,
-                           (int)SymbolInfoInteger(_Symbol, SYMBOL_VOLUME_DIGITS));
+      double step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+      int vol_digits = (step > 0.0) ? (int)MathMax(0, -MathLog10(step)) : 2;
+      double close_lot = NormalizeDouble(lot * InpPartialPct / 100.0, vol_digits);
       double min_lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
       if(close_lot < min_lot) close_lot = min_lot;
 

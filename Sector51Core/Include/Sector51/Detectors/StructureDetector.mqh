@@ -47,7 +47,7 @@ private:
    bool              IsPivotHigh(const double &high[], int shift);
    bool              IsPivotLow(const double &low[], int shift);
    ENUM_SWING_TYPE   ClassifySwing(bool is_high, double price);
-   bool              CheckBOS(const SSwingPoint &new_swing, const datetime &bar_time,
+   bool              CheckBOS(const SSwingPoint &new_swing, const datetime &bar_time[],
                               const double &close_arr[], SStructureEvent &out_event);
 
    void              PushSwing(const SSwingPoint &sp);
@@ -175,7 +175,7 @@ ENUM_SWING_TYPE CStructureDetector::ClassifySwing(bool is_high, double price)
 //+------------------------------------------------------------------+
 //|  Check BOS / CHoCH after adding a new swing                      |
 //+------------------------------------------------------------------+
-bool CStructureDetector::CheckBOS(const SSwingPoint &new_swing, const datetime &bar_time,
+bool CStructureDetector::CheckBOS(const SSwingPoint &new_swing, const datetime &bar_time[],
                                    const double &close_arr[], SStructureEvent &out_event)
 {
    //--- Need at least one prior swing to compare against

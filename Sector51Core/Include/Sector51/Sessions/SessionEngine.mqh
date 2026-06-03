@@ -217,13 +217,13 @@ void CSessionEngine::OpenSession(const SSessionProfile &p, const datetime &bar_t
                                   double bar_high, double bar_low)
 {
    if(m_active_count >= ArraySize(m_active)) return;
-   SSessionWindow &w = m_active[m_active_count++];
-   w.session    = p.session;
-   w.open_time  = bar_time;
-   w.close_time = 0;
-   w.high       = bar_high;
-   w.low        = bar_low;
-   w.is_active  = true;
+   int idx = m_active_count++;
+   m_active[idx].session    = p.session;
+   m_active[idx].open_time  = bar_time;
+   m_active[idx].close_time = 0;
+   m_active[idx].high       = bar_high;
+   m_active[idx].low        = bar_low;
+   m_active[idx].is_active  = true;
 }
 
 void CSessionEngine::CloseSession(int active_idx, datetime close_time)
