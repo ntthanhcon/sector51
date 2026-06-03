@@ -306,8 +306,13 @@ bool HTF_HasSweep(ENUM_TREND_BIAS bias)
    for(int i = 0; i < g_htf.Liquidity().GetLevelCount(); i++)
    {
       SLiquidityLevel lv = g_htf.Liquidity().GetLevel(i);
-      if(lv.time != 0 && lv.event_type == wanted) return true;
+      if(lv.time != 0 && lv.event_type == wanted)
+      {
+         DebugLog("HTF sweep found");
+         return true;
+      }
    }
+   DebugLog("HTF sweep not found");
    return false;
 }
 
@@ -509,8 +514,14 @@ void TryBuy()
    else if(htf_ob.time != 0)
       entry_price = htf_ob.low;
    else
-      return;
+   {
+      double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      if(bid <= 0.0) return;
+      entry_price = InpUseLimitOrder ? bid - _Point : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      DebugLog("Buy fallback entry price from market because no HTF OB or FVG");
+   }
 
+   if(entry_price <= 0.0) return;
    entry_price = NormalizeDouble(entry_price, _Digits);
 
    double sl = CalcSL(true, entry_price, htf_ob, entry_fvg, atr);
@@ -567,8 +578,14 @@ void TrySell()
    else if(htf_ob.time != 0)
       entry_price = htf_ob.high;
    else
-      return;
+   {
+      double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      if(ask <= 0.0) return;
+      entry_price = InpUseLimitOrder ? ask + _Point : SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      DebugLog("Sell fallback entry price from market because no HTF OB or FVG");
+   }
 
+   if(entry_price <= 0.0) return;
    entry_price = NormalizeDouble(entry_price, _Digits);
 
    double sl = CalcSL(false, entry_price, htf_ob, entry_fvg, atr);
@@ -617,9 +634,10 @@ void EvaluateSignal()
    }
 
    if(InpDebugMode)
-      PrintFormat("Sector51 DEBUG | bias=%s open=%d htf_ob=%d fvg=%d",
+      PrintFormat("Sector51 DEBUG | bias=%s open=%d htf_ob_count=%d fvg_count=%d entry_tf_bias=%s",
                   EnumToString(g_htf.Structure().GetBias()), CountOpen(),
-                  g_htf.OB().GetOBCount(), g_entry.FVG().GetFVGCount());
+                  g_htf.OB().GetOBCount(), g_entry.FVG().GetFVGCount(),
+                  EnumToString(g_entry.Structure().GetBias()));
 
    ManagePending();
 
