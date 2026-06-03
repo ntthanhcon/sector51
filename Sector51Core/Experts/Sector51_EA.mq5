@@ -321,9 +321,9 @@ double CalcSL(bool is_buy, double entry, const SOrderBlock &ob,
    double buf = InpSL_BufferPoints * _Point;
    double sl  = 0.0;
 
-   if(InpSL_FVG)
+   if(InpSL_FVG && fvg.time != 0)
       sl = is_buy ? fvg.bottom - buf : fvg.top + buf;
-   else if(InpSL_ATR)
+   else if(InpSL_ATR || (InpSL_OB && ob.time == 0))
       sl = is_buy ? entry - atr * InpSL_ATR_Mult : entry + atr * InpSL_ATR_Mult;
    else // default: OB boundary
       sl = is_buy ? ob.low - buf : ob.high + buf;
