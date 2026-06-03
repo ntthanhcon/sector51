@@ -240,7 +240,7 @@ double CalculateRiskLot(double stop_loss_distance)
    if(!InpUseRiskPercent || stop_loss_distance <= 0.0)
       return InpLotSize;
 
-   double risk_amount = AccountBalance() * InpRiskPercent / 100.0;
+   double risk_amount = AccountInfoDouble(ACCOUNT_BALANCE) * InpRiskPercent / 100.0;
    double tick_size   = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
    double tick_value  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
    if(tick_size <= 0.0 || tick_value <= 0.0)
