@@ -93,17 +93,17 @@ double CLiquidityDetector::CalcATR(const double &high[], const double &low[],
    int period = m_config.atr_period;
    if(total < period + 1) return 0.0;
 
-   //--- Seed with simple average of first 'period' TRs
+   //--- Seed with simple average of first 'period' TRs (series arrays: 0=newest, older bars have larger indices)
    double sum = 0.0;
-   for(int i = total - 1; i >= total - period; i--)
+   for(int i = 0; i < period; i++)
    {
       double tr = MathMax(high[i], close[i + 1]) - MathMin(low[i], close[i + 1]);
       sum += tr;
    }
    double atr = sum / period;
 
-   //--- Smooth remaining bars
-   for(int i = total - period - 1; i >= 0; i--)
+   //--- Smooth remaining older bars
+   for(int i = period; i < total - 1; i++)
    {
       double tr = MathMax(high[i], close[i + 1]) - MathMin(low[i], close[i + 1]);
       atr = (atr * (period - 1) + tr) / period;
