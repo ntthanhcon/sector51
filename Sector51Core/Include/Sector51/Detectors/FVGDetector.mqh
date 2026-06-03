@@ -4,11 +4,11 @@
 //|  Detects bullish / bearish Fair Value Gaps                       |
 //|  Tracks: active, filled, invalidated states                      |
 //+------------------------------------------------------------------+
-#pragma once
+
 #ifndef FVGDETECTOR_MQH
 #define FVGDETECTOR_MQH
 
-#include "MarketStructure.mqh"
+#include <Sector51/Core/MarketStructure.mqh>
 
 //+------------------------------------------------------------------+
 //|  Configuration                                                    |

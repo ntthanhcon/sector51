@@ -4,12 +4,12 @@
 //|  ICT-style Order Blocks: last opposite candle before BOS         |
 //|  Tracks: active, mitigated, invalidated                          |
 //+------------------------------------------------------------------+
-#pragma once
+
 #ifndef ORDERBLOCKDETECTOR_MQH
 #define ORDERBLOCKDETECTOR_MQH
 
-#include "MarketStructure.mqh"
-#include "StructureDetector.mqh"
+#include <Sector51/Core/MarketStructure.mqh>
+#include <Sector51/Detectors/StructureDetector.mqh>
 
 //+------------------------------------------------------------------+
 //|  Configuration                                                    |

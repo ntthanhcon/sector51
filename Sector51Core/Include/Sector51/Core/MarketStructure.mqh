@@ -3,7 +3,7 @@
 //|                                     Sector51-Core Library v1.0   |
 //|                    Core enums, structs, and interfaces            |
 //+------------------------------------------------------------------+
-#pragma once
+
 #ifndef MARKETSTRUCTURE_MQH
 #define MARKETSTRUCTURE_MQH
 

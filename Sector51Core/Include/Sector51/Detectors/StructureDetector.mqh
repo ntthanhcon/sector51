@@ -4,11 +4,11 @@
 //|  Detects: HH, HL, LH, LL, BOS, CHoCH                            |
 //|  Non-repainting. Multi-timeframe ready.                          |
 //+------------------------------------------------------------------+
-#pragma once
+
 #ifndef STRUCTUREDETECTOR_MQH
 #define STRUCTUREDETECTOR_MQH
 
-#include "MarketStructure.mqh"
+#include <Sector51/Core/MarketStructure.mqh>
 
 //+------------------------------------------------------------------+
 //|  Configuration                                                    |

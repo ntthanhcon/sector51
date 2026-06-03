@@ -3,11 +3,11 @@
 //|                                     Sector51-Core Library v1.0   |
 //|  Forex, Metal, and Crypto sessions with configurable profiles    |
 //+------------------------------------------------------------------+
-#pragma once
+
 #ifndef SESSIONENGINE_MQH
 #define SESSIONENGINE_MQH
 
-#include "MarketStructure.mqh"
+#include <Sector51/Core/MarketStructure.mqh>
 
 //+------------------------------------------------------------------+
 //|  Session time definition (UTC hours, 0–23)                       |

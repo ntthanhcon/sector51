@@ -4,11 +4,11 @@
 //|  Detects: EQH, EQL, Liquidity Sweeps                            |
 //|  ATR-normalized proximity thresholds                             |
 //+------------------------------------------------------------------+
-#pragma once
+
 #ifndef LIQUIDITYDETECTOR_MQH
 #define LIQUIDITYDETECTOR_MQH
 
-#include "MarketStructure.mqh"
+#include <Sector51/Core/MarketStructure.mqh>
 
 //+------------------------------------------------------------------+
 //|  Configuration                                                    |

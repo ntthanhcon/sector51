@@ -3,16 +3,16 @@
 //|                                     Sector51-Core Library v1.0   |
 //|  Single-include facade — plug-and-play entry point               |
 //+------------------------------------------------------------------+
-#pragma once
+
 #ifndef SECTOR51CORE_MQH
 #define SECTOR51CORE_MQH
 
-#include "Core/MarketStructure.mqh"
-#include "Detectors/StructureDetector.mqh"
-#include "Detectors/LiquidityDetector.mqh"
-#include "Detectors/FVGDetector.mqh"
-#include "Detectors/OrderBlockDetector.mqh"
-#include "Sessions/SessionEngine.mqh"
+#include <Sector51/Core/MarketStructure.mqh>
+#include <Sector51/Detectors/StructureDetector.mqh>
+#include <Sector51/Detectors/LiquidityDetector.mqh>
+#include <Sector51/Detectors/FVGDetector.mqh>
+#include <Sector51/Detectors/OrderBlockDetector.mqh>
+#include <Sector51/Sessions/SessionEngine.mqh>
 
 //+------------------------------------------------------------------+
 //|  Unified config bundle                                            |
