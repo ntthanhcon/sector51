@@ -60,9 +60,12 @@ input double InpPartialPct      = 50.0;  // % to close at 1:1
 
 //--- [7] RISK MANAGEMENT
 sinput group "=== Risk Management ==="
-input double InpLotSize         = 0.01;  // Fixed lot size
-input int    InpMaxOpenTrades   = 1;     // Max concurrent open trades
-input bool   InpOnlyOnePerDir   = true;  // Max 1 trade per direction
+input double InpLotSize         = 0.01;  // Fixed lot size (ignored when using percent risk)
+input bool   InpUseRiskPercent   = false; // Use account risk percent instead of fixed lot
+input double InpRiskPercent      = 1.0;   // Risk % of account balance per trade
+input double InpMaxLotSize       = 1.0;   // Max lot size when using risk sizing (0 = no limit)
+input int    InpMaxOpenTrades    = 1;     // Max concurrent open trades
+input bool   InpOnlyOnePerDir    = true;  // Max 1 trade per direction
 
 //--- [8] SESSION FILTER
 sinput group "=== Session Filter ==="
@@ -85,6 +88,7 @@ input bool   InpBOS_RequireClose= true; // BOS confirmed on candle close
 
 //--- [10] MISC
 sinput group "=== Misc ==="
+input bool   InpDebugMode       = false;  // Enable debug logging
 input int    InpMagicNumber     = 51000; // EA magic number
 input string InpComment         = "S51"; // Trade comment
 
@@ -223,6 +227,43 @@ int CountOpen(ENUM_POSITION_TYPE dir = WRONG_VALUE)
          count++;
    }
    return count;
+}
+
+int GetVolumeDigits()
+{
+   double step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+   return (step > 0.0) ? (int)MathMax(0, -MathLog10(step)) : 2;
+}
+
+double CalculateRiskLot(double stop_loss_distance)
+{
+   if(!InpUseRiskPercent || stop_loss_distance <= 0.0)
+      return InpLotSize;
+
+   double risk_amount = AccountBalance() * InpRiskPercent / 100.0;
+   double tick_size   = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   double tick_value  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   if(tick_size <= 0.0 || tick_value <= 0.0)
+      return InpLotSize;
+
+   double value_per_lot = MathAbs(stop_loss_distance) / tick_size * tick_value;
+   if(value_per_lot <= 0.0)
+      return InpLotSize;
+
+   int vol_digits = GetVolumeDigits();
+   double lot = NormalizeDouble(risk_amount / value_per_lot, vol_digits);
+   double min_lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   double max_lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
+   if(min_lot > 0.0 && lot < min_lot) lot = min_lot;
+   if(max_lot > 0.0 && lot > max_lot) lot = max_lot;
+   if(InpMaxLotSize > 0.0 && lot > InpMaxLotSize) lot = InpMaxLotSize;
+   return lot;
+}
+
+void DebugLog(string message)
+{
+   if(InpDebugMode)
+      Print("Sector51 DEBUG | ", message);
 }
 
 //==================================================================//
@@ -459,36 +500,45 @@ void TryBuy()
    if(InpOnlyOnePerDir && CountOpen(POSITION_TYPE_BUY) > 0) return;
 
    double atr = g_entry.Liquidity().GetATR();
-   double entry_price;
+   double entry_price = 0.0;
 
    if(InpEntryAtOBMid)
       entry_price = htf_ob.low + (htf_ob.high - htf_ob.low) * 0.5;
-   else
+   else if(InpUseEntry_FVG && entry_fvg.time != 0)
       entry_price = entry_fvg.bottom; // default: FVG bottom for buy
+   else if(htf_ob.time != 0)
+      entry_price = htf_ob.low;
+   else
+      return;
 
    entry_price = NormalizeDouble(entry_price, _Digits);
 
    double sl = CalcSL(true, entry_price, htf_ob, entry_fvg, atr);
-   double tp = CalcTP(true, entry_price, sl, atr);
-
    if(sl <= 0.0 || sl >= entry_price) return;
+
+   double lot = InpLotSize;
+   if(InpUseRiskPercent)
+      lot = CalculateRiskLot(MathAbs(entry_price - sl));
+   if(lot <= 0.0) return;
+
+   double tp = CalcTP(true, entry_price, sl, atr);
    if(tp <= entry_price) return;
 
    if(InpUseLimitOrder)
    {
-      if(g_trade.BuyLimit(InpLotSize, entry_price, _Symbol, sl, tp,
+      if(g_trade.BuyLimit(lot, entry_price, _Symbol, sl, tp,
                           ORDER_TIME_GTC, 0, InpComment + "_BUY"))
       {
          g_pending_ticket = g_trade.ResultOrder();
          g_pending_opened = TimeCurrent();
-         PrintFormat("Sector51 BUY LIMIT | entry=%.5f sl=%.5f tp=%.5f rr=%.2f",
-                     entry_price, sl, tp, MathAbs(tp-entry_price)/MathAbs(entry_price-sl));
+         PrintFormat("Sector51 BUY LIMIT | lot=%.2f entry=%.5f sl=%.5f tp=%.5f rr=%.2f",
+                     lot, entry_price, sl, tp, MathAbs(tp-entry_price)/MathAbs(entry_price-sl));
       }
    }
    else
    {
-      if(g_trade.Buy(InpLotSize, _Symbol, 0, sl, tp, InpComment + "_BUY"))
-         PrintFormat("Sector51 BUY MKT | sl=%.5f tp=%.5f", sl, tp);
+      if(g_trade.Buy(lot, _Symbol, 0, sl, tp, InpComment + "_BUY"))
+         PrintFormat("Sector51 BUY MKT | lot=%.2f sl=%.5f tp=%.5f", lot, sl, tp);
    }
 }
 
@@ -508,43 +558,68 @@ void TrySell()
    if(InpOnlyOnePerDir && CountOpen(POSITION_TYPE_SELL) > 0) return;
 
    double atr = g_entry.Liquidity().GetATR();
-   double entry_price;
+   double entry_price = 0.0;
 
    if(InpEntryAtOBMid)
       entry_price = htf_ob.low + (htf_ob.high - htf_ob.low) * 0.5;
-   else
+   else if(InpUseEntry_FVG && entry_fvg.time != 0)
       entry_price = entry_fvg.top; // FVG top for sell
+   else if(htf_ob.time != 0)
+      entry_price = htf_ob.high;
+   else
+      return;
 
    entry_price = NormalizeDouble(entry_price, _Digits);
 
    double sl = CalcSL(false, entry_price, htf_ob, entry_fvg, atr);
-   double tp = CalcTP(false, entry_price, sl, atr);
-
    if(sl <= 0.0 || sl <= entry_price) return;
+
+   double lot = InpLotSize;
+   if(InpUseRiskPercent)
+      lot = CalculateRiskLot(MathAbs(entry_price - sl));
+   if(lot <= 0.0) return;
+
+   double tp = CalcTP(false, entry_price, sl, atr);
    if(tp >= entry_price) return;
 
    if(InpUseLimitOrder)
    {
-      if(g_trade.SellLimit(InpLotSize, entry_price, _Symbol, sl, tp,
+      if(g_trade.SellLimit(lot, entry_price, _Symbol, sl, tp,
                            ORDER_TIME_GTC, 0, InpComment + "_SELL"))
       {
          g_pending_ticket = g_trade.ResultOrder();
          g_pending_opened = TimeCurrent();
-         PrintFormat("Sector51 SELL LIMIT | entry=%.5f sl=%.5f tp=%.5f rr=%.2f",
-                     entry_price, sl, tp, MathAbs(tp-entry_price)/MathAbs(sl-entry_price));
+         PrintFormat("Sector51 SELL LIMIT | lot=%.2f entry=%.5f sl=%.5f tp=%.5f rr=%.2f",
+                     lot, entry_price, sl, tp, MathAbs(tp-entry_price)/MathAbs(sl-entry_price));
       }
    }
    else
    {
-      if(g_trade.Sell(InpLotSize, _Symbol, 0, sl, tp, InpComment + "_SELL"))
-         PrintFormat("Sector51 SELL MKT | sl=%.5f tp=%.5f", sl, tp);
+      if(g_trade.Sell(lot, _Symbol, 0, sl, tp, InpComment + "_SELL"))
+         PrintFormat("Sector51 SELL MKT | lot=%.2f sl=%.5f tp=%.5f", lot, sl, tp);
    }
 }
 
 void EvaluateSignal()
 {
-   if(!IsSessionAllowed()) return;
-   if(CountOpen() >= InpMaxOpenTrades) return;
+   if(!IsSessionAllowed())
+   {
+      if(InpDebugMode)
+         Print("Sector51 DEBUG | session blocked");
+      return;
+   }
+
+   if(CountOpen() >= InpMaxOpenTrades)
+   {
+      if(InpDebugMode)
+         PrintFormat("Sector51 DEBUG | max open trades reached (%d)", CountOpen());
+      return;
+   }
+
+   if(InpDebugMode)
+      PrintFormat("Sector51 DEBUG | bias=%s open=%d htf_ob=%d fvg=%d",
+                  EnumToString(g_htf.Structure().GetBias()), CountOpen(),
+                  g_htf.OB().GetOBCount(), g_entry.FVG().GetFVGCount());
 
    ManagePending();
 
