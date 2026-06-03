@@ -97,11 +97,11 @@ public:
                                 SSector51Snapshot &snap);
 
    //--- Direct access to sub-detectors
-   const CStructureDetector&   Structure() const { return m_structure; }
-   const CLiquidityDetector&   Liquidity() const { return m_liquidity; }
-   const CFVGDetector&         FVG()       const { return m_fvg;       }
-   const COrderBlockDetector&  OB()        const { return m_ob;        }
-   const CSessionEngine&       Session()   const { return m_session;   }
+   CStructureDetector*   Structure() { return GetPointer(m_structure); }
+   CLiquidityDetector*   Liquidity() { return GetPointer(m_liquidity); }
+   CFVGDetector*         FVG()       { return GetPointer(m_fvg);       }
+   COrderBlockDetector*  OB()        { return GetPointer(m_ob);        }
+   CSessionEngine*       Session()   { return GetPointer(m_session);   }
 
    bool                 IsInitialized() const { return m_initialized; }
    void                 Reset();

@@ -87,8 +87,8 @@ public:
    int               GetActiveCount()   const { return m_active_count; }
    int               GetWindowCount()   const { return m_window_count; }
 
-   const SSessionWindow*  GetActive(int idx) const;
-   const SSessionWindow*  GetWindow(int idx) const;  // 0 = most recent closed
+   SSessionWindow         GetActive(int idx) const;
+   SSessionWindow         GetWindow(int idx) const;  // 0 = most recent closed
 
    bool              IsSessionActive(ENUM_SESSION s) const;
    void              Reset();
@@ -305,17 +305,19 @@ bool CSessionEngine::Update(const datetime &time[], const double &high[],
 }
 
 //+------------------------------------------------------------------+
-const SSessionWindow* CSessionEngine::GetActive(int idx) const
+SSessionWindow CSessionEngine::GetActive(int idx) const
 {
-   if(idx < 0 || idx >= m_active_count) return NULL;
-   return &m_active[idx];
+   SSessionWindow empty;
+   if(idx < 0 || idx >= m_active_count) return empty;
+   return m_active[idx];
 }
 
-const SSessionWindow* CSessionEngine::GetWindow(int idx) const
+SSessionWindow CSessionEngine::GetWindow(int idx) const
 {
-   if(idx < 0 || idx >= m_window_count) return NULL;
+   SSessionWindow empty;
+   if(idx < 0 || idx >= m_window_count) return empty;
    //--- 0 = most recent (last element)
-   return &m_windows[m_window_count - 1 - idx];
+   return m_windows[m_window_count - 1 - idx];
 }
 
 bool CSessionEngine::IsSessionActive(ENUM_SESSION s) const
