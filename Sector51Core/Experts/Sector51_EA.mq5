@@ -36,7 +36,6 @@ input bool  InpFVGmustBeInOB    = true;   // FVG must overlap HTF OB zone
 //--- [4] ENTRY EXECUTION
 sinput group "=== Entry Execution ==="
 input bool  InpUseLimitOrder    = true;   // true=Limit order | false=Market
-input bool  InpEntryAtFVG       = true;   // Entry at FVG edge
 input bool  InpEntryAtOBMid     = false;  // Entry at OB midpoint (overrides FVG)
 input bool  InpAllowFallbackEntry = false;  // Allow market fallback entry when no OB/FVG
 input int   InpPendingExpireBars= 5;      // Cancel pending after N bars (0=never)
@@ -51,13 +50,17 @@ input int    InpSL_BufferPoints = 10;     // Buffer on SL (points)
 
 //--- [6] TAKE PROFIT
 sinput group "=== Take Profit ==="
-input bool   InpTP_RR           = true;   // Fixed R:R ratio
 input double InpTP_RR_Value     = 2.0;   // R:R ratio
 input bool   InpTP_NextLiq      = false;  // TP at next liquidity level
 input bool   InpTP_ATR          = false;  // TP = N x ATR
 input double InpTP_ATR_Mult     = 3.0;   // ATR multiplier for TP
-input bool   InpUsePartialClose = false;  // Partial close at 1:1
+input bool   InpUsePartialClose = true;   // Partial close at 1:1
 input double InpPartialPct      = 50.0;  // % to close at 1:1
+input bool   InpUseBreakEven    = true;   // Move SL to break-even on strong profit
+input double InpBreakEven_RR    = 1.0;   // Trigger break-even at this R:R
+input bool   InpUseTrailingStop = false;  // Enable trailing stop
+input double InpTrailingStart_RR = 1.5;  // Start trailing after this R:R
+input double InpTrailing_ATR_Mult = 0.8; // Trailing stop distance in ATR
 
 //--- [7] RISK MANAGEMENT
 sinput group "=== Risk Management ==="
@@ -66,7 +69,6 @@ input bool   InpUseRiskPercent   = false; // Use account risk percent instead of
 input double InpRiskPercent      = 1.0;   // Risk % of account balance per trade
 input double InpMaxLotSize       = 1.0;   // Max lot size when using risk sizing (0 = no limit)
 input int    InpMaxOpenTrades    = 1;     // Max concurrent open trades
-input bool   InpOnlyOnePerDir    = false;  // Max 1 trade per direction (disabled)
 
 //--- [8] SESSION FILTER
 sinput group "=== Session Filter ==="
@@ -486,6 +488,54 @@ void CheckPartialClose()
    }
 }
 
+void CheckPositionManagement()
+{
+   if(!InpUseBreakEven && !InpUseTrailingStop) return;
+   double atr = g_entry.Liquidity().GetATR();
+   if(atr <= 0.0) return;
+
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong ticket = PositionGetTicket(i);
+      if(!PositionSelectByTicket(ticket)) continue;
+      if(PositionGetInteger(POSITION_MAGIC) != InpMagicNumber) continue;
+      if(PositionGetString(POSITION_SYMBOL) != _Symbol) continue;
+
+      double entry = PositionGetDouble(POSITION_PRICE_OPEN);
+      double sl    = PositionGetDouble(POSITION_SL);
+      double price = PositionGetDouble(POSITION_PRICE_CURRENT);
+      bool   is_buy = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY);
+      double r_dist = MathAbs(entry - sl);
+      if(r_dist <= 0.0) continue;
+
+      double profit_rr = is_buy ? (price - entry) / r_dist : (entry - price) / r_dist;
+      double new_sl = sl;
+
+      if(InpUseBreakEven && profit_rr >= InpBreakEven_RR)
+      {
+         double break_even = entry;
+         if(is_buy ? break_even > new_sl : break_even < new_sl)
+            new_sl = break_even;
+      }
+
+      if(InpUseTrailingStop && profit_rr >= InpTrailingStart_RR)
+      {
+         double trail_dist = atr * InpTrailing_ATR_Mult;
+         double trail_sl = is_buy ? price - trail_dist : price + trail_dist;
+         if(is_buy ? trail_sl > new_sl : trail_sl < new_sl)
+            new_sl = trail_sl;
+      }
+
+      new_sl = NormalizeDouble(new_sl, _Digits);
+      if(new_sl != sl)
+      {
+         if(g_trade.PositionModify(ticket, new_sl, 0.0))
+            PrintFormat("Sector51: modified SL ticket=%d old=%.5f new=%.5f rr=%.2f",
+                        ticket, sl, new_sl, profit_rr);
+      }
+   }
+}
+
 //==================================================================//
 //  MAIN SIGNAL EVALUATION                                           //
 //==================================================================//
@@ -671,8 +721,9 @@ void OnTick()
    bool new_bar = g_entry.Update(ent_t, ent_o, ent_h, ent_l, ent_c,
                                   ArraySize(ent_t), ent_snap);
 
-   //--- Partial close every tick
+   //--- Partial close and active management every tick
    CheckPartialClose();
+   CheckPositionManagement();
 
    //--- Signal only on new Entry TF bar
    if(!new_bar) return;
