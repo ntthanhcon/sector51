@@ -38,6 +38,7 @@ sinput group "=== Entry Execution ==="
 input bool  InpUseLimitOrder    = true;   // true=Limit order | false=Market
 input bool  InpEntryAtFVG       = true;   // Entry at FVG edge
 input bool  InpEntryAtOBMid     = false;  // Entry at OB midpoint (overrides FVG)
+input bool  InpAllowFallbackEntry = false;  // Allow market fallback entry when no OB/FVG
 input int   InpPendingExpireBars= 5;      // Cancel pending after N bars (0=never)
 
 //--- [5] STOP LOSS
@@ -515,6 +516,8 @@ void TryBuy()
       entry_price = htf_ob.low;
    else
    {
+      if(!InpAllowFallbackEntry)
+         return;
       double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
       if(bid <= 0.0) return;
       entry_price = InpUseLimitOrder ? bid - _Point : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
@@ -579,6 +582,8 @@ void TrySell()
       entry_price = htf_ob.high;
    else
    {
+      if(!InpAllowFallbackEntry)
+         return;
       double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
       if(ask <= 0.0) return;
       entry_price = InpUseLimitOrder ? ask + _Point : SymbolInfoDouble(_Symbol, SYMBOL_BID);
