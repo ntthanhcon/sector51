@@ -156,7 +156,10 @@ int OnInit()
    }
 
    g_trade.SetExpertMagicNumber(InpMagicNumber);
-   g_trade.SetDeviationInPoints(20);
+   // set deviation (slippage tolerance) dynamically based on current spread
+   int spread_pts = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+   int dev_pts = MathMax(20, spread_pts * 2);
+   g_trade.SetDeviationInPoints(dev_pts);
    g_trade.SetTypeFilling(ORDER_FILLING_IOC);
 
    ArrayResize(g_partial_done, 100);
@@ -257,7 +260,8 @@ double CalculateRiskLot(double stop_loss_distance)
    double lot = NormalizeDouble(risk_amount / value_per_lot, vol_digits);
    double min_lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double max_lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
-   if(min_lot > 0.0 && lot < min_lot) lot = min_lot;
+   // If calculated lot is smaller than broker min lot, return 0 to indicate trade should be skipped
+   if(min_lot > 0.0 && lot < min_lot) return 0.0;
    if(max_lot > 0.0 && lot > max_lot) lot = max_lot;
    if(InpMaxLotSize > 0.0 && lot > InpMaxLotSize) lot = InpMaxLotSize;
    return lot;
@@ -368,6 +372,10 @@ double CalcSL(bool is_buy, double entry, const SOrderBlock &ob,
               const SFVG &fvg, double atr)
 {
    double buf = InpSL_BufferPoints * _Point;
+   // account for current spread to avoid SL being triggered by spread
+   int spread_points = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+   double spread_price = spread_points * _Point;
+   buf += spread_price;
    double sl  = 0.0;
 
    if(InpSL_FVG && fvg.time != 0)
@@ -583,7 +591,12 @@ void TryBuy()
    double lot = InpLotSize;
    if(InpUseRiskPercent)
       lot = CalculateRiskLot(MathAbs(entry_price - sl));
-   if(lot <= 0.0) return;
+   if(lot <= 0.0)
+   {
+      if(InpDebugMode)
+         PrintFormat("Sector51 DEBUG | Buy skipped: calculated lot below broker min (%.5f)", lot);
+      return;
+   }
 
    double tp = CalcTP(true, entry_price, sl, atr);
    if(tp <= entry_price) return;
@@ -649,7 +662,12 @@ void TrySell()
    double lot = InpLotSize;
    if(InpUseRiskPercent)
       lot = CalculateRiskLot(MathAbs(entry_price - sl));
-   if(lot <= 0.0) return;
+   if(lot <= 0.0)
+   {
+      if(InpDebugMode)
+         PrintFormat("Sector51 DEBUG | Sell skipped: calculated lot below broker min (%.5f)", lot);
+      return;
+   }
 
    double tp = CalcTP(false, entry_price, sl, atr);
    if(tp >= entry_price) return;
