@@ -66,7 +66,7 @@ input bool   InpUseRiskPercent   = false; // Use account risk percent instead of
 input double InpRiskPercent      = 1.0;   // Risk % of account balance per trade
 input double InpMaxLotSize       = 1.0;   // Max lot size when using risk sizing (0 = no limit)
 input int    InpMaxOpenTrades    = 1;     // Max concurrent open trades
-input bool   InpOnlyOnePerDir    = true;  // Max 1 trade per direction
+input bool   InpOnlyOnePerDir    = false;  // Max 1 trade per direction (disabled)
 
 //--- [8] SESSION FILTER
 sinput group "=== Session Filter ==="
@@ -503,7 +503,7 @@ void TryBuy()
    if(!Entry_HasOB(BIAS_BULLISH))  return;
    if(!Entry_HasBOS(BIAS_BULLISH)) return;
 
-   if(InpOnlyOnePerDir && CountOpen(POSITION_TYPE_BUY) > 0) return;
+   // removed per-direction cap: allow multiple buys concurrently
 
    double atr = g_entry.Liquidity().GetATR();
    double entry_price = 0.0;
@@ -569,7 +569,7 @@ void TrySell()
    if(!Entry_HasOB(BIAS_BEARISH))  return;
    if(!Entry_HasBOS(BIAS_BEARISH)) return;
 
-   if(InpOnlyOnePerDir && CountOpen(POSITION_TYPE_SELL) > 0) return;
+   // removed per-direction cap: allow multiple sells concurrently
 
    double atr = g_entry.Liquidity().GetATR();
    double entry_price = 0.0;
