@@ -11,13 +11,13 @@
 #include <Trade/Trade.mqh>
 
 //==================================================================//
-//  INPUT GROUPS                                                     //
+//  INPUT GROUPS                                                          //
 //==================================================================//
 
-//--- [1] TIMEFRAMES
+//--- [1] TIMEFRAMES (Only valid MT5 timeframes: M1, M5, M15, M30, H1, H4, D1
 sinput group "=== Timeframes ==="
-input ENUM_TIMEFRAMES  InpHTF           = PERIOD_H4;   // Higher Timeframe (HTF)
-input ENUM_TIMEFRAMES  InpEntryTF       = PERIOD_M15;  // Entry Timeframe
+input ENUM_TIMEFRAMES  InpHTF           = PERIOD_H1;   // Higher Timeframe (HTF)
+input ENUM_TIMEFRAMES  InpEntryTF       = PERIOD_M1;  // Entry Timeframe
 
 //--- [2] HTF SIGNAL FILTERS
 sinput group "=== HTF Signal Filters ==="
@@ -112,11 +112,40 @@ ulong    g_pending_ticket = 0;
 datetime g_pending_opened = 0;
 
 //==================================================================//
+//  HELPER — Validate timeframe
+//==================================================================//
+
+bool IsValidTimeframe(ENUM_TIMEFRAMES tf)
+{
+   return (tf == PERIOD_M1 || tf == PERIOD_M5 || tf == PERIOD_M15 ||
+           tf == PERIOD_M30 || tf == PERIOD_H1 || tf == PERIOD_H4 || tf == PERIOD_D1);
+}
+
+//==================================================================//
 //  INIT                                                             //
 //==================================================================//
 
 int OnInit()
 {
+   // Validate timeframes first
+   if(!IsValidTimeframe(InpHTF))
+   {
+      Alert("Sector51: Invalid HTF - only M1, M5, M15, M30, H1, H4, D1 allowed");
+      return INIT_FAILED;
+   }
+   if(!IsValidTimeframe(InpEntryTF))
+   {
+      Alert("Sector51: Invalid Entry TF - only M1, M5, M15, M30, H1, H4, D1 allowed");
+      return INIT_FAILED;
+   }
+
+   // Make sure HTF is higher or equal to Entry TF
+   if((int)InpHTF < (int)InpEntryTF)
+   {
+      Alert("Sector51: HTF must be higher or equal to Entry TF");
+      return INIT_FAILED;
+   }
+
    //--- HTF core
    SSector51Config htf_cfg;
    htf_cfg.symbol                     = _Symbol;
@@ -156,10 +185,6 @@ int OnInit()
    }
 
    g_trade.SetExpertMagicNumber(InpMagicNumber);
-   // set deviation (slippage tolerance) dynamically based on current spread
-   int spread_pts = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
-   int dev_pts = MathMax(20, spread_pts * 2);
-   g_trade.SetDeviationInPoints(dev_pts);
    g_trade.SetTypeFilling(ORDER_FILLING_IOC);
 
    ArrayResize(g_partial_done, 100);
@@ -601,6 +626,11 @@ void TryBuy()
    double tp = CalcTP(true, entry_price, sl, atr);
    if(tp <= entry_price) return;
 
+   // Update deviation before placing trade
+   int spread_pts = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+   int dev_pts = MathMax(20, spread_pts * 2);
+   g_trade.SetDeviationInPoints(dev_pts);
+
    if(InpUseLimitOrder)
    {
       if(g_trade.BuyLimit(lot, entry_price, _Symbol, sl, tp,
@@ -671,6 +701,11 @@ void TrySell()
 
    double tp = CalcTP(false, entry_price, sl, atr);
    if(tp >= entry_price) return;
+
+   // Update deviation before placing trade
+   int spread_pts = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+   int dev_pts = MathMax(20, spread_pts * 2);
+   g_trade.SetDeviationInPoints(dev_pts);
 
    if(InpUseLimitOrder)
    {
